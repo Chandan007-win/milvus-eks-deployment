@@ -1,0 +1,28 @@
+cluster:
+  enabled: false
+
+standalone:
+  enabled: true
+
+etcd:
+  replicaCount: 1
+  persistence:
+    enabled: true
+    size: 10Gi
+
+minio:
+  mode: standalone
+  persistence:
+    enabled: true
+    size: 20Gi
+
+pulsar:
+  enabled: false
+
+# Use EBS-backed PVCs (default storageClass in EKS is usually gp2/gp3 depending on your setup)
+persistence:
+  enabled: true
+
+service:
+  type: LoadBalancer
+
