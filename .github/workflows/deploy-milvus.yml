@@ -1,0 +1,53 @@
+name: deploy-milvus
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ap-south-1
+      CLUSTER_NAME: milvus-eks-dev
+      NAMESPACE: milvus
+      RELEASE: milvus
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Install helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.2
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+
+      - name: Create namespace
+        run: kubectl create ns $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Add Milvus Helm repo
+        run: |
+          helm repo add milvus https://zilliztech.github.io/milvus-helm/
+          helm repo update
+
+      - name: Install/Upgrade Milvus
+        run: |
+          helm upgrade --install $RELEASE milvus/milvus \
+            -n $NAMESPACE \
+            -f helm/milvus/values-dev.yaml \
+            --wait
+

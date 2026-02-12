@@ -1,0 +1,37 @@
+name: terraform-plan
+
+on:
+  pull_request:
+    branches: [ "dev-deployment" ]
+    paths:
+      - "infra/terraform/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ap-south-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: infra/terraform
+        run: terraform init -backend-config=backend/dev.hcl
+
+      - name: Terraform Plan
+        working-directory: infra/terraform
+        run: terraform plan -var-file=env/dev.tfvars
+
